@@ -4,4 +4,4 @@
   become: true
   gather_facts: true
   roles:
-    - role: crownops.deploy_base.bootstrap_host
+    - role: bootstrap_host
