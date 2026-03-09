@@ -1,6 +1,6 @@
 # Quick Start
 
-This collection is the reusable day-0 layer for brand new Ubuntu VPS hosts.
+This collection is the reusable day-0 layer for brand new Ubuntu hosts.
 
 ## Design rule
 
@@ -20,49 +20,44 @@ Those belong in the consuming deployment repo.
 - Ubuntu 22.04 (`jammy`) is the default expectation
 - Ubuntu 24.04 (`noble`) is supported by setting `bootstrap_target_ubuntu_release: noble`
 
-## 1. Clone the base repo
-
-Recommended layout:
+## Recommended layout
 
 ```text
-Code/
-  vps/
-    000-vps-base/
-      crownops-vps-base/
-    002-ovh-.../
-      your-deployment-repo/
+VPS/
+  crownops-deploy-base/
+  crownops-deploy-core/
+  crownops-deploy-edge/
 ```
 
-## 2. Install collection dependencies
+## Install dependencies
 
-From the collection repo:
+From this repo:
 
 ```bash
 ansible-galaxy collection install -r requirements.yml
 ```
 
-## 3. Build and install the collection locally
+## Build and test locally
 
 ```bash
 ansible-galaxy collection build . --output-path dist
-ansible-galaxy collection install -p ~/.ansible/collections dist/crownops-vps_base-0.1.0.tar.gz --force
+ansible-galaxy collection install -p ~/.ansible/collections dist/crownops-deploy_base-0.1.0.tar.gz --force
+ansible-playbook -i examples/inventory/hosts.yml playbooks/bootstrap.yml
 ```
 
-## 4. Prepare inventory in the consuming deployment repo
-
-Minimum fresh-host inventory shape:
+## Minimum inventory shape
 
 ```yaml
 all:
   children:
-    vps_base:
+    base_hosts:
       hosts:
-        host-01:
+        fresh-host-01:
           ansible_host: 203.0.113.10
           ansible_user: root
 ```
 
-Minimum vars:
+## Minimum vars
 
 ```yaml
 bootstrap_target_ubuntu_release: jammy
@@ -72,36 +67,12 @@ bootstrap_admin_authorized_keys:
   - "ssh-ed25519 AAAA..."
 ```
 
-## 5. Run the bootstrap playbook
+## Success criteria
 
-From the consuming deployment repo:
-
-```bash
-ansible-playbook -i inventories/prod/hosts.yml playbooks/bootstrap.yml
-```
-
-Or directly from this collection repo against the example inventory:
-
-```bash
-ansible-playbook -i examples/inventory/hosts.yml playbooks/bootstrap.yml
-```
-
-## 6. What success should look like
-
-- your admin user exists and can SSH by key
+- the admin user exists and can SSH by key
 - password auth is disabled
 - root SSH login is disabled
 - UFW is enabled with the intended allow-list
 - fail2ban is running
 - unattended security updates are enabled
 - optional Docker and Tailscale are installed when requested
-
-## 7. Recommended next layer
-
-After this baseline completes, run an environment-specific deployment repo that adds:
-- DNS and TLS
-- reverse proxy
-- application containers
-- backups
-- environment-specific firewall rules
-- secret material

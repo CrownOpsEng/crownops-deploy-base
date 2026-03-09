@@ -4,35 +4,37 @@ This collection repo should stay clean and reusable.
 
 ## Recommended split
 
-`000-vps-base/crownops-vps-base`
+`VPS/crownops-deploy-base`
 - shared collection repo
 - no production inventory
 - no secrets
-- no provider-specific application roles
+- no feature-specific application roles
 
-`00x-<environment>/<deployment-repo>`
-- environment inventory
-- vault files
-- deployment wrappers
-- provider/application-specific roles
-- operator docs for that environment
+`VPS/crownops-deploy-core`
+- deployment playbooks
+- feature orchestration
+- operator docs
+
+`VPS/crownops-deploy-edge`
+- environment-specific inventory or secret overlays
+- operator-only data that should not live in the published deployment repos
 
 ## Why this split exists
 
 - avoids leaking environment-specific data into the shared base layer
 - keeps GitHub history clean
 - lets multiple deployments consume the same hardened bootstrap role
-- makes the base role safe to publish internally or externally later
+- makes the base collection safe to publish independently
 
 ## Consumption model
 
 The deployment repo should:
 1. install public collection dependencies
-2. build/install this collection from the checked-out base repo
+2. install this collection from GitHub
 3. call the collection role by FQCN
 
 Example FQCN:
 
 ```yaml
-- role: crownops.vps_base.bootstrap_host
+- role: crownops.deploy_base.bootstrap_host
 ```

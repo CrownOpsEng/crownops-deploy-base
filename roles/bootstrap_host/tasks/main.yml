@@ -3,7 +3,7 @@
   ansible.builtin.assert:
     that:
       - ansible_distribution == "Ubuntu"
-    fail_msg: "crownops.vps_base.bootstrap_host supports Ubuntu hosts only."
+    fail_msg: "crownops.deploy_base.bootstrap_host supports Ubuntu hosts only."
 
 - name: Assert supported Ubuntu release
   ansible.builtin.assert:

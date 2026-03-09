@@ -1,10 +1,10 @@
 namespace: crownops
-name: vps_base
+name: deploy_base
 version: 0.1.0
 readme: README.md
 authors:
   - CrownOps
-description: Reusable fresh-host Ubuntu VPS bootstrap collection.
+description: Reusable fresh-host Ubuntu bootstrap collection for CrownOps deployments.
 license:
   - MIT
 tags:
@@ -12,7 +12,7 @@ tags:
   - security
   - bootstrap
   - ubuntu
-  - vps
+  - deployment
 dependencies: {}
 build_ignore:
   - .git

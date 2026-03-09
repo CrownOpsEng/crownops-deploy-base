@@ -1,14 +1,14 @@
-# CrownOpsEng VPS Base Collection
+# CrownOps Deploy Base Collection
 
-Reusable Ansible collection for fresh Ubuntu VPS bootstrap.
+Reusable Ansible collection for fresh Ubuntu bootstrap.
 
 Purpose:
-- provide a clean day-0 baseline for new VPS hosts
+- provide a clean day-0 baseline for new remote hosts
 - keep environment-specific inventory and secrets out of the shared base repo
 - let deployment repos consume a hardened bootstrap layer without copying roles
 
 Current baseline role:
-- `crownops.vps_base.bootstrap_host`
+- `crownops.deploy_base.bootstrap_host`
 
 Supported OS:
 - Ubuntu 22.04 (`jammy`) by default
@@ -39,6 +39,6 @@ Example direct use:
 
 ```bash
 ansible-galaxy collection build . --output-path dist
-ansible-galaxy collection install -p ~/.ansible/collections dist/crownops-vps_base-0.1.0.tar.gz
+ansible-galaxy collection install -p ~/.ansible/collections dist/crownops-deploy_base-0.1.0.tar.gz
 ansible-playbook -i examples/inventory/hosts.yml playbooks/bootstrap.yml
 ```
