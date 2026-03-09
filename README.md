@@ -7,8 +7,9 @@ Purpose:
 - keep environment-specific inventory and secrets out of the shared base repo
 - let deployment repos consume a hardened bootstrap layer without copying roles
 
-Current baseline role:
+Public roles:
 - `crownops.deploy_base.bootstrap_host`
+- `crownops.deploy_base.network_lockdown`
 
 Supported OS:
 - Ubuntu 22.04 (`jammy`) by default
@@ -24,6 +25,7 @@ What the baseline covers:
 - unattended security updates baseline
 - optional Docker Engine install
 - optional Tailscale install and join
+- staged post-join SSH lockdown with explicit enable and confirm gates
 
 What stays out of this repo by design:
 - production inventories
@@ -45,4 +47,5 @@ Example direct use:
 ansible-galaxy collection build . --output-path dist
 ansible-galaxy collection install -p ./.ansible/collections dist/crownops-deploy_base-0.1.0.tar.gz --force
 ansible-playbook -i examples/inventory/hosts.yml playbooks/bootstrap.yml
+ansible-playbook -i examples/inventory/hosts.yml playbooks/lockdown.yml -e lockdown_enabled=true -e lockdown_confirmed=true
 ```

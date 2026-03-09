@@ -1,0 +1,13 @@
+---
+lockdown_enabled: false
+lockdown_confirmed: false
+lockdown_verify_tailscale: true
+lockdown_mode: tailscale_interface # tailscale_interface|allowed_cidrs
+lockdown_allowed_cidrs: []
+lockdown_break_glass_file: /etc/crownops/allow_public_ssh
+lockdown_tailscale_interface: tailscale0
+lockdown_ssh_port: 22
+lockdown_disable_public_ssh: true
+lockdown_control_host_probe_enabled: false
+lockdown_control_host_probe_timeout: 8
+lockdown_control_host_probe_host: ""

@@ -29,3 +29,6 @@ jobs:
 
       - name: Syntax check bootstrap playbook
         run: ansible-playbook --syntax-check -i examples/inventory/hosts.yml playbooks/bootstrap.yml
+
+      - name: Syntax check lockdown playbook
+        run: ansible-playbook --syntax-check -i examples/inventory/hosts.yml playbooks/lockdown.yml

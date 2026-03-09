@@ -1,0 +1,7 @@
+---
+- name: Apply staged SSH lockdown with CrownOps base network controls
+  hosts: base_hosts
+  become: true
+  gather_facts: false
+  roles:
+    - role: network_lockdown

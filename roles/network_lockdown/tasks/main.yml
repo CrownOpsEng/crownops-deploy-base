@@ -1,0 +1,126 @@
+---
+- name: Check break-glass override file
+  ansible.builtin.stat:
+    path: "{{ lockdown_break_glass_file }}"
+  register: network_lockdown_break_glass
+
+- name: Log phase-one posture when lockdown is not fully enabled
+  ansible.builtin.debug:
+    msg: >-
+      Lockdown remains in phase one. Public SSH will be preserved.
+      Set both lockdown_enabled=true and lockdown_confirmed=true to enforce
+      restrictive SSH rules.
+  when: not ((lockdown_enabled | bool) and (lockdown_confirmed | bool))
+
+- name: Skip restrictive lockdown when not fully enabled or break-glass is active
+  ansible.builtin.meta: end_host
+  when:
+    - (not (lockdown_enabled | bool)) or (not (lockdown_confirmed | bool)) or (network_lockdown_break_glass.stat.exists | default(false))
+
+- name: Validate lockdown mode
+  ansible.builtin.assert:
+    that:
+      - lockdown_mode in ['tailscale_interface', 'allowed_cidrs']
+    fail_msg: >-
+      lockdown_mode must be tailscale_interface or allowed_cidrs.
+      Current value: {{ lockdown_mode }}.
+
+- name: Require explicit CIDRs when lockdown mode is allowed_cidrs
+  ansible.builtin.assert:
+    that:
+      - lockdown_allowed_cidrs | length > 0
+    fail_msg: "lockdown_allowed_cidrs must contain at least one CIDR when lockdown_mode=allowed_cidrs."
+  when: lockdown_mode == 'allowed_cidrs'
+
+- name: Verify Tailscale interface exists
+  ansible.builtin.command:
+    argv:
+      - ip
+      - -o
+      - link
+      - show
+      - "{{ lockdown_tailscale_interface }}"
+  register: network_lockdown_tailscale_interface
+  changed_when: false
+  when: lockdown_verify_tailscale | bool
+
+- name: Verify Tailscale status JSON
+  ansible.builtin.command:
+    argv:
+      - tailscale
+      - status
+      - --json
+  register: network_lockdown_tailscale_status
+  changed_when: false
+  when: lockdown_verify_tailscale | bool
+
+- name: Parse Tailscale status JSON
+  ansible.builtin.set_fact:
+    network_lockdown_tailscale_backend_state: "{{ (network_lockdown_tailscale_status.stdout | from_json).BackendState | default('unknown') }}"
+  when: lockdown_verify_tailscale | bool
+
+- name: Verify Tailscale IPv4 address exists
+  ansible.builtin.command:
+    argv:
+      - tailscale
+      - ip
+      - -4
+  register: network_lockdown_tailscale_ipv4
+  changed_when: false
+  when: lockdown_verify_tailscale | bool
+
+- name: Assert Tailscale runtime checks are healthy before restrictive SSH changes
+  ansible.builtin.assert:
+    that:
+      - network_lockdown_tailscale_interface.rc == 0
+      - network_lockdown_tailscale_status.rc == 0
+      - network_lockdown_tailscale_backend_state == 'Running'
+      - (network_lockdown_tailscale_ipv4.stdout | trim | length) > 0
+    fail_msg: >-
+      Refusing restrictive SSH lockdown: tailscale runtime checks failed.
+      interface_rc={{ network_lockdown_tailscale_interface.rc }},
+      status_rc={{ network_lockdown_tailscale_status.rc }},
+      backend={{ network_lockdown_tailscale_backend_state }},
+      ip={{ network_lockdown_tailscale_ipv4.stdout | default('') | trim }}.
+  when: lockdown_verify_tailscale | bool
+
+- name: Probe SSH reachability from the control host when configured
+  ansible.builtin.wait_for:
+    host: "{{ lockdown_control_host_probe_host }}"
+    port: "{{ lockdown_ssh_port }}"
+    timeout: "{{ lockdown_control_host_probe_timeout }}"
+    state: started
+  delegate_to: localhost
+  become: false
+  run_once: true
+  when:
+    - lockdown_control_host_probe_enabled | bool
+    - (lockdown_control_host_probe_host | string | trim) != ''
+
+- name: Allow SSH on the Tailscale interface
+  community.general.ufw:
+    rule: allow
+    direction: in
+    interface: "{{ lockdown_tailscale_interface }}"
+    to_port: "{{ lockdown_ssh_port }}"
+    proto: tcp
+  when: lockdown_mode == 'tailscale_interface'
+
+- name: Allow SSH only from configured CIDRs
+  community.general.ufw:
+    rule: allow
+    direction: in
+    src: "{{ item }}"
+    to_port: "{{ lockdown_ssh_port }}"
+    proto: tcp
+  loop: "{{ lockdown_allowed_cidrs }}"
+  when: lockdown_mode == 'allowed_cidrs'
+
+- name: Remove public SSH exposure after restrictive rule is in place
+  community.general.ufw:
+    rule: allow
+    direction: in
+    to_port: "{{ lockdown_ssh_port }}"
+    proto: tcp
+    delete: true
+  when: lockdown_disable_public_ssh | bool
