@@ -1,6 +1,20 @@
+# Standard Ansible/operator-local ignores.
+
+# Ansible runtime artifacts
 .ansible/
-dist/
 *.retry
-*.tar.gz
+
+# Python cache from helper scripts or plugins
+__pycache__/
+*.py[cod]
+
+# Local packaging output
+build/
+dist/
+.tmp-dist-verify/
+
+# Operator-local vault password helpers
+.vault_pass
 .vault_pass*
 vault-pass*
+*.vault-password*
