@@ -5,8 +5,7 @@ Reusable Ansible collection for fresh Ubuntu bootstrap.
 Purpose:
 
 - provide a clean day-0 baseline for new remote hosts
-- keep environment-specific inventory and secrets out of the shared base repo
-- let deployment repos consume a hardened bootstrap layer without copying roles
+- allow deployment repos consume a hardened bootstrap layer without copying roles
 
 Public roles:
 
