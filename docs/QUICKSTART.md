@@ -7,6 +7,7 @@ This collection is the reusable host-foundation layer for Ubuntu hosts.
 Keep this repo generic.
 
 Do not store:
+
 - inventories
 - vault files
 - production DNS names
@@ -28,6 +29,7 @@ Those belong in the consuming deployment repo.
 `bootstrap_host` handles fresh-host setup, including optional Tailscale installation and join.
 
 `network_lockdown` handles the staged post-join SSH posture:
+
 - phase one: preserve public SSH
 - phase two: only remove public SSH when both `lockdown_enabled=true` and `lockdown_confirmed=true`
 - runtime health checks: verify `tailscale0`, `tailscale status --json`, and a Tailscale IPv4 address before restrictive changes

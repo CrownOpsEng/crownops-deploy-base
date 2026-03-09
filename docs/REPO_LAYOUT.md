@@ -5,6 +5,7 @@ This collection repo should stay clean and reusable.
 ## Recommended split
 
 `VPS/crownops-deploy-base`
+
 - shared collection repo
 - no production inventory
 - no secrets
@@ -12,15 +13,18 @@ This collection repo should stay clean and reusable.
 - reusable host capabilities such as bootstrap and staged network lockdown
 
 `VPS/crownops-deploy-core`
+
 - deployment playbooks
 - feature orchestration
 - operator docs
 
 `VPS/crownops-deploy-services`
+
 - shared service-stack collection repo
 - reusable application and backup roles
 
 `VPS/crownops-deploy-edge`
+
 - separate deployment repo for edge-facing services
 
 ## Why this split exists
@@ -34,6 +38,7 @@ This collection repo should stay clean and reusable.
 ## Consumption model
 
 The deployment repo should:
+
 1. install public collection dependencies
 2. install this collection from GitHub
 3. call the collection role by FQCN
