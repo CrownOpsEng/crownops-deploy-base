@@ -1,0 +1,8 @@
+[DEFAULT]
+bantime = {{ bootstrap_fail2ban_bantime }}
+findtime = {{ bootstrap_fail2ban_findtime }}
+maxretry = {{ bootstrap_fail2ban_maxretry }}
+backend = systemd
+
+[sshd]
+enabled = true

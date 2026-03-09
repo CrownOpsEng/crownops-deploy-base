@@ -1,0 +1,192 @@
+---
+- name: Assert Ubuntu target
+  ansible.builtin.assert:
+    that:
+      - ansible_distribution == "Ubuntu"
+    fail_msg: "crownops.vps_base.bootstrap_host supports Ubuntu hosts only."
+
+- name: Assert supported Ubuntu release
+  ansible.builtin.assert:
+    that:
+      - ansible_distribution_release in bootstrap_supported_ubuntu_releases
+    fail_msg: >-
+      Unsupported Ubuntu release {{ ansible_distribution_release }}.
+      Supported releases: {{ bootstrap_supported_ubuntu_releases | join(', ') }}.
+
+- name: Assert configured target Ubuntu release
+  ansible.builtin.assert:
+    that:
+      - ansible_distribution_release == bootstrap_target_ubuntu_release
+    fail_msg: >-
+      Target host release is {{ ansible_distribution_release }}, but bootstrap_target_ubuntu_release is
+      {{ bootstrap_target_ubuntu_release }}. Update inventory to jammy or noble explicitly.
+
+- name: Assert admin SSH keys are provided
+  ansible.builtin.assert:
+    that:
+      - bootstrap_admin_authorized_keys | length > 0
+    fail_msg: "Set bootstrap_admin_authorized_keys before running bootstrap to avoid lockout."
+
+- name: Assert SSH remains reachable through UFW baseline
+  ansible.builtin.assert:
+    that:
+      - 22 in (bootstrap_ufw_allowed_tcp_public | list)
+    fail_msg: >-
+      Port 22 is not present in bootstrap_ufw_allowed_tcp_public.
+      This baseline refuses to close SSH during first bootstrap to avoid lockout.
+  when:
+    - bootstrap_manage_ufw | bool
+    - bootstrap_require_ssh_port_open | bool
+
+- name: Set system hostname when configured
+  ansible.builtin.hostname:
+    name: "{{ bootstrap_hostname }}"
+  when: (bootstrap_hostname | string | trim) != ""
+
+- name: Set system timezone
+  community.general.timezone:
+    name: "{{ bootstrap_timezone }}"
+  when: (bootstrap_timezone | string | trim) != ""
+
+- name: Update apt cache and upgrade packages
+  ansible.builtin.apt:
+    update_cache: true
+    upgrade: "{{ bootstrap_apt_upgrade_mode }}"
+    cache_valid_time: "{{ bootstrap_apt_cache_valid_time }}"
+
+- name: Install base packages
+  ansible.builtin.apt:
+    name: "{{ bootstrap_base_packages + bootstrap_extra_packages }}"
+    state: present
+    update_cache: true
+
+- name: Ensure admin group exists
+  ansible.builtin.group:
+    name: "{{ bootstrap_admin_group }}"
+    state: present
+
+- name: Ensure admin user exists
+  ansible.builtin.user:
+    name: "{{ bootstrap_admin_user }}"
+    group: "{{ bootstrap_admin_group }}"
+    groups: "{{ bootstrap_admin_groups | join(',') }}"
+    append: "{{ bootstrap_admin_append_groups }}"
+    password_lock: "{{ bootstrap_admin_password_lock }}"
+    shell: "{{ bootstrap_admin_shell }}"
+    create_home: "{{ bootstrap_admin_create_home }}"
+    state: present
+
+- name: Install admin authorized keys
+  ansible.posix.authorized_key:
+    user: "{{ bootstrap_admin_user }}"
+    key: "{{ item }}"
+    state: present
+    manage_dir: true
+  loop: "{{ bootstrap_admin_authorized_keys }}"
+
+- name: Install bootstrap sudoers drop-in
+  ansible.builtin.copy:
+    dest: "/etc/sudoers.d/90-{{ bootstrap_admin_user }}"
+    owner: root
+    group: root
+    mode: "0440"
+    content: "{{ bootstrap_admin_user }} ALL=(ALL) {{ 'NOPASSWD:' if bootstrap_admin_sudo_nopasswd else '' }}ALL\n"
+    validate: "/usr/sbin/visudo -cf %s"
+  when: bootstrap_admin_manage_sudoers | bool
+
+- name: Render SSH hardening drop-in
+  ansible.builtin.file:
+    path: "{{ bootstrap_sshd_drop_in_path | dirname }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+  when: bootstrap_manage_sshd_hardening | bool
+
+- name: Render SSH hardening drop-in
+  ansible.builtin.template:
+    src: sshd_hardening.conf.j2
+    dest: "{{ bootstrap_sshd_drop_in_path }}"
+    owner: root
+    group: root
+    mode: "0644"
+  register: bootstrap_sshd_drop_in
+  when: bootstrap_manage_sshd_hardening | bool
+
+- name: Validate SSH configuration
+  ansible.builtin.command: /usr/sbin/sshd -t
+  changed_when: false
+  when: bootstrap_manage_sshd_hardening | bool
+
+- name: Restart SSH after hardening changes
+  ansible.builtin.service:
+    name: ssh
+    state: restarted
+  when:
+    - bootstrap_manage_sshd_hardening | bool
+    - bootstrap_sshd_drop_in is changed
+
+- name: Configure UFW logging
+  community.general.ufw:
+    logging: "{{ bootstrap_ufw_logging }}"
+  when: bootstrap_manage_ufw | bool
+
+- name: Configure UFW default policies
+  community.general.ufw:
+    direction: "{{ item.direction }}"
+    policy: "{{ item.policy }}"
+  loop:
+    - { direction: incoming, policy: "{{ bootstrap_ufw_default_incoming_policy }}" }
+    - { direction: outgoing, policy: "{{ bootstrap_ufw_default_outgoing_policy }}" }
+  when: bootstrap_manage_ufw | bool
+
+- name: Allow configured public TCP ports
+  community.general.ufw:
+    rule: allow
+    port: "{{ item }}"
+    proto: tcp
+  loop: "{{ bootstrap_ufw_allowed_tcp_public }}"
+  when: bootstrap_manage_ufw | bool
+
+- name: Allow configured public UDP ports
+  community.general.ufw:
+    rule: allow
+    port: "{{ item }}"
+    proto: udp
+  loop: "{{ bootstrap_ufw_allowed_udp_public }}"
+  when: bootstrap_manage_ufw | bool
+
+- name: Enable UFW
+  community.general.ufw:
+    state: enabled
+  when: bootstrap_manage_ufw | bool
+
+- name: Include fail2ban baseline
+  ansible.builtin.include_tasks: fail2ban.yml
+  when: bootstrap_manage_fail2ban | bool
+
+- name: Configure unattended upgrades baseline
+  ansible.builtin.copy:
+    dest: /etc/apt/apt.conf.d/20auto-upgrades
+    owner: root
+    group: root
+    mode: "0644"
+    content: |
+      APT::Periodic::Update-Package-Lists "1";
+      APT::Periodic::Unattended-Upgrade "{{ '1' if bootstrap_enable_unattended_upgrades else '0' }}";
+      APT::Periodic::AutocleanInterval "{{ bootstrap_unattended_upgrades_autoclean_interval }}";
+
+- name: Ensure unattended-upgrades service is enabled
+  ansible.builtin.service:
+    name: unattended-upgrades
+    state: started
+    enabled: true
+  when: bootstrap_enable_unattended_upgrades | bool
+
+- name: Include Docker setup
+  ansible.builtin.include_tasks: docker.yml
+  when: bootstrap_install_docker | bool
+
+- name: Include Tailscale setup
+  ansible.builtin.include_tasks: tailscale.yml
+  when: bootstrap_install_tailscale | bool

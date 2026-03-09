@@ -1,0 +1,7 @@
+---
+- name: Bootstrap fresh VPS host with CrownOps base baseline
+  hosts: vps_base
+  become: true
+  gather_facts: true
+  roles:
+    - role: crownops.vps_base.bootstrap_host

@@ -1,0 +1,6 @@
+.ansible/
+dist/
+*.retry
+*.tar.gz
+.vault_pass*
+vault-pass*

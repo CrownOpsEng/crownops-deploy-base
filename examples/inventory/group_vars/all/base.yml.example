@@ -1,0 +1,16 @@
+---
+bootstrap_target_ubuntu_release: jammy
+
+bootstrap_admin_user: deploy
+bootstrap_admin_group: deploy
+bootstrap_admin_authorized_keys:
+  - "ssh-ed25519 REPLACE_ME"
+
+bootstrap_hostname: fresh-vps-01
+bootstrap_timezone: America/Denver
+
+bootstrap_ufw_allowed_tcp_public:
+  - 22
+
+bootstrap_install_docker: false
+bootstrap_install_tailscale: false
