@@ -40,6 +40,7 @@ ansible-galaxy collection install -r requirements.yml
 ## Build and test locally
 
 ```bash
+ansible-galaxy collection install -r requirements.yml
 ansible-galaxy collection build . --output-path dist
 ansible-galaxy collection install -p ./.ansible/collections dist/crownops-deploy_base-0.1.0.tar.gz --force
 ansible-playbook -i examples/inventory/hosts.yml playbooks/bootstrap.yml

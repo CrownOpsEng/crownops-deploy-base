@@ -35,6 +35,10 @@ Read first:
 - `docs/QUICKSTART.md`
 - `docs/REPO_LAYOUT.md`
 
+Quality controls:
+- collection dependency metadata declared in `galaxy.yml`
+- GitHub Actions CI builds the collection and syntax-checks the bootstrap playbook
+
 Example direct use:
 
 ```bash

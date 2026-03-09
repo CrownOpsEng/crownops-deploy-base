@@ -13,7 +13,9 @@ tags:
   - bootstrap
   - ubuntu
   - deployment
-dependencies: {}
+dependencies:
+  ansible.posix: ">=2.1.0,<3.0.0"
+  community.general: ">=12.0.0,<13.0.0"
 build_ignore:
   - .git
   - .gitignore
