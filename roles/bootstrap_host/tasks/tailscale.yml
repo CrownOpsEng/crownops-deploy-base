@@ -15,13 +15,33 @@
     group: root
     mode: "0644"
 
+- name: Read Tailscale GPG key fingerprint
+  ansible.builtin.command:
+    argv:
+      - gpg
+      - --show-keys
+      - --with-colons
+      - /usr/share/keyrings/tailscale-archive-keyring.gpg
+  register: bootstrap_tailscale_keyring_info
+  changed_when: false
+
+- name: Assert Tailscale GPG key fingerprint matches the reviewed value
+  ansible.builtin.assert:
+    that:
+      - bootstrap_tailscale_apt_key_fingerprint in bootstrap_tailscale_keyring_info.stdout
+    fail_msg: >-
+      Tailscale apt signing key fingerprint did not match {{ bootstrap_tailscale_apt_key_fingerprint }}.
+      Refusing to trust the downloaded key.
+
 - name: Install Tailscale apt repository
-  ansible.builtin.get_url:
-    url: "https://pkgs.tailscale.com/stable/ubuntu/{{ ansible_distribution_release }}.tailscale-keyring.list"
+  ansible.builtin.copy:
     dest: /etc/apt/sources.list.d/tailscale.list
     owner: root
     group: root
     mode: "0644"
+    content: |
+      # Tailscale packages for ubuntu {{ ansible_distribution_release }}
+      deb [signed-by=/usr/share/keyrings/tailscale-archive-keyring.gpg] https://pkgs.tailscale.com/stable/ubuntu {{ ansible_distribution_release }} main
 
 - name: Install Tailscale package
   ansible.builtin.apt:

@@ -15,6 +15,24 @@
     group: root
     mode: "0644"
 
+- name: Read Docker GPG key fingerprint
+  ansible.builtin.command:
+    argv:
+      - gpg
+      - --show-keys
+      - --with-colons
+      - /etc/apt/keyrings/docker.asc
+  register: bootstrap_docker_keyring_info
+  changed_when: false
+
+- name: Assert Docker GPG key fingerprint matches the reviewed value
+  ansible.builtin.assert:
+    that:
+      - bootstrap_docker_apt_key_fingerprint in bootstrap_docker_keyring_info.stdout
+    fail_msg: >-
+      Docker apt signing key fingerprint did not match {{ bootstrap_docker_apt_key_fingerprint }}.
+      Refusing to trust the downloaded key.
+
 - name: Install Docker apt repository
   ansible.builtin.copy:
     dest: /etc/apt/sources.list.d/docker.list

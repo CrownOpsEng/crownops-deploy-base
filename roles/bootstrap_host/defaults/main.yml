@@ -72,6 +72,7 @@ bootstrap_enable_unattended_upgrades: true
 bootstrap_unattended_upgrades_autoclean_interval: 7
 
 bootstrap_install_docker: false
+bootstrap_docker_apt_key_fingerprint: 9DC858229FC7DD38854AE2D88D81803C0EBFCD88
 bootstrap_docker_packages:
   - docker-ce
   - docker-ce-cli
@@ -82,6 +83,7 @@ bootstrap_docker_users:
   - "{{ bootstrap_admin_user }}"
 
 bootstrap_install_tailscale: false
+bootstrap_tailscale_apt_key_fingerprint: 2596A99EAAB33821893C0A79458CA832957F5868
 bootstrap_tailscale_auth_key: ""
 bootstrap_tailscale_hostname: "{{ bootstrap_hostname | default(inventory_hostname, true) }}"
 bootstrap_tailscale_tags: []

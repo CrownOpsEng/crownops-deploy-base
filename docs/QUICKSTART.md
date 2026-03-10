@@ -27,6 +27,7 @@ Those belong in the consuming deployment repo.
 - `crownops.deploy_base.network_lockdown`
 
 `bootstrap_host` handles fresh-host setup, including optional Tailscale installation and join.
+When Docker or Tailscale are enabled, the role verifies the downloaded apt signing key fingerprint before trusting the repository configuration.
 
 `network_lockdown` handles the staged post-join SSH posture:
 

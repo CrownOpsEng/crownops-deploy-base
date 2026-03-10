@@ -28,6 +28,7 @@ What the baseline covers:
 - unattended security updates baseline
 - optional Docker Engine install
 - optional Tailscale install and join
+- reviewed Docker and Tailscale apt signing keys are verified before those repos are trusted
 - staged post-join SSH lockdown with explicit enable and confirm gates
 
 What stays out of this repo by design:
