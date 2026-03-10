@@ -74,8 +74,8 @@
       - item.rule == 'allow'
       - item.direction == 'in'
       - item.proto in ['tcp', 'udp']
-      - item.port > 0
-      - item.port < 65536
+      - (item.port | int) > 0
+      - (item.port | int) < 65536
       - (item.from | length) > 0
     fail_msg: "Invalid host_ufw rule '{{ item.name | default('unnamed') }}'."
   loop: "{{ host_ufw_effective_rules }}"
