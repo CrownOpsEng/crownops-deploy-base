@@ -1,0 +1,30 @@
+---
+argument_specs:
+  main:
+    short_description: Reconcile steady-state host UFW policy.
+    options:
+      host_ufw:
+        type: dict
+        required: true
+        options:
+          enabled:
+            type: bool
+          logging:
+            type: str
+          default_incoming_policy:
+            type: str
+          default_outgoing_policy:
+            type: str
+          managed_state_dir:
+            type: str
+          managed_state_file:
+            type: str
+          baseline_tcp_public:
+            type: list
+            elements: int
+          baseline_udp_public:
+            type: list
+            elements: int
+          requests:
+            type: list
+            elements: dict

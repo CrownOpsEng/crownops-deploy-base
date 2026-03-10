@@ -10,6 +10,7 @@ Purpose:
 Public roles:
 
 - `crownops.deploy_base.bootstrap_host`
+- `crownops.deploy_base.host_ufw`
 - `crownops.deploy_base.network_lockdown`
 
 Supported OS:
@@ -23,7 +24,7 @@ What the baseline covers:
 - admin user creation and SSH key install
 - passwordless sudo drop-in for the bootstrap admin
 - SSH hardening drop-in
-- UFW baseline rules
+- bootstrap-safe UFW baseline rules
 - fail2ban baseline
 - unattended security updates baseline
 - optional Docker Engine install
@@ -37,6 +38,7 @@ What stays out of this repo by design:
 - host-specific secrets
 - application-specific roles
 - environment overlays
+- application-specific firewall requests are composed by the consuming deployment repo and passed into `host_ufw`
 
 Read first:
 

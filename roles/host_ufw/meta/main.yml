@@ -1,0 +1,7 @@
+---
+galaxy_info:
+  author: CrownOps
+  description: Reconcile steady-state UFW policy for CrownOps hosts.
+  license: MIT
+  min_ansible_version: "2.17"
+dependencies: []

@@ -10,7 +10,7 @@ This collection repo should stay clean and reusable.
 - no production inventory
 - no secrets
 - no feature-specific application roles
-- reusable host capabilities such as bootstrap and staged network lockdown
+- reusable host capabilities such as bootstrap, steady-state firewall policy, and staged network lockdown
 
 `VPS/crownops-deploy-core`
 
@@ -47,5 +47,6 @@ Example FQCN:
 
 ```yaml
 - role: crownops.deploy_base.bootstrap_host
+- role: crownops.deploy_base.host_ufw
 - role: crownops.deploy_base.network_lockdown
 ```

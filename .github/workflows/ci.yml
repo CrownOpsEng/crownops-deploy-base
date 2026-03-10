@@ -30,8 +30,17 @@ jobs:
       - name: Syntax check bootstrap playbook
         run: ansible-playbook --syntax-check -i examples/inventory/hosts.yml playbooks/bootstrap.yml
 
+      - name: Syntax check host UFW playbook
+        run: ansible-playbook --syntax-check -i examples/inventory/hosts.yml playbooks/ufw.yml
+
       - name: Syntax check lockdown playbook
         run: ansible-playbook --syntax-check -i examples/inventory/hosts.yml playbooks/lockdown.yml
+
+      - name: Smoke test host UFW contract
+        run: bash tests/smoke/test_host_ufw_contract.sh
+
+      - name: Smoke test host UFW invalid request rejection
+        run: bash tests/smoke/test_host_ufw_invalid_request_rejected.sh
 
       - name: Smoke test Tailscale join decision
         run: bash tests/smoke/test_tailscale_join_decision.sh
