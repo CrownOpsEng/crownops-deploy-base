@@ -6,7 +6,7 @@ trap 'rm -f "${TMP_PLAYBOOK}"' EXIT
 
 cat > "${TMP_PLAYBOOK}" <<'EOF'
 ---
-- name: Verify Tailscale join decision logic
+- name: Verify Tailscale bootstrap guardrails
   hosts: localhost
   connection: local
   gather_facts: false
@@ -39,6 +39,32 @@ cat > "${TMP_PLAYBOOK}" <<'EOF'
       ansible.builtin.assert:
         that:
           - bootstrap_tailscale_needs_join | bool
+
+    - name: Set invalid advertised tags
+      ansible.builtin.set_fact:
+        bootstrap_tailscale_tags:
+          - core
+
+    - name: Validate configured Tailscale tags
+      ansible.builtin.assert:
+        that:
+          - (bootstrap_tailscale_tags | select('match', '^tag:') | list | length) == (bootstrap_tailscale_tags | length)
 EOF
 
-ansible-playbook -i 'localhost,' "${TMP_PLAYBOOK}"
+set +e
+OUTPUT="$(ansible-playbook -i 'localhost,' "${TMP_PLAYBOOK}" 2>&1)"
+STATUS=$?
+set -e
+
+if [[ ${STATUS} -eq 0 ]]; then
+  echo "expected invalid Tailscale tags to fail validation" >&2
+  exit 1
+fi
+
+if [[ "${OUTPUT}" != *"bootstrap_tailscale_tags"* ]]; then
+  echo "expected invalid Tailscale tag validation failure in output" >&2
+  printf '%s\n' "${OUTPUT}" >&2
+  exit 1
+fi
+
+printf 'tailscale bootstrap smoke test passed\n'
