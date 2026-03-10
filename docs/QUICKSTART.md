@@ -24,10 +24,14 @@ Those belong in the consuming deployment repo.
 ## Public roles
 
 - `crownops.deploy_base.bootstrap_host`
+- `crownops.deploy_base.host_ufw`
 - `crownops.deploy_base.network_lockdown`
 
 `bootstrap_host` handles fresh-host setup, including optional Tailscale installation and join.
 When Docker or Tailscale are enabled, the role verifies the downloaded apt signing key fingerprint before trusting the repository configuration.
+
+`host_ufw` handles steady-state firewall reconciliation for the managed CrownOps rule set.
+The consuming deployment repo should compose final firewall requests and then hand the merged policy to this role.
 
 `network_lockdown` handles the staged post-join SSH posture:
 
@@ -61,6 +65,7 @@ ansible-galaxy collection install -r requirements.yml
 ansible-galaxy collection build . --output-path dist
 ansible-galaxy collection install -p ./.ansible/collections dist/crownops-deploy_base-0.1.0.tar.gz --force
 ansible-playbook -i examples/inventory/hosts.yml playbooks/bootstrap.yml
+ansible-playbook -i examples/inventory/hosts.yml playbooks/ufw.yml
 ansible-playbook -i examples/inventory/hosts.yml playbooks/lockdown.yml -e lockdown_enabled=true -e lockdown_confirmed=true
 ```
 
@@ -91,7 +96,8 @@ bootstrap_admin_authorized_keys:
 - the admin user exists and can SSH by key
 - password auth is disabled
 - root SSH login is disabled
-- UFW is enabled with the intended allow-list
+- bootstrap UFW is enabled with the intended allow-list
+- steady-state UFW policy can be reconciled separately through `host_ufw`
 - fail2ban is running
 - unattended security updates are enabled
 - optional Docker and Tailscale are installed when requested
