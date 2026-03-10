@@ -65,6 +65,24 @@
   changed_when: false
   failed_when: false
 
+- name: Parse current Tailscale state
+  ansible.builtin.set_fact:
+    bootstrap_tailscale_status_json: >-
+      {{
+        (bootstrap_tailscale_status.stdout | from_json)
+        if (bootstrap_tailscale_status.rc == 0 and (bootstrap_tailscale_status.stdout | string | trim) != '')
+        else {}
+      }}
+    bootstrap_tailscale_needs_join: >-
+      {{
+        (bootstrap_tailscale_auth_key | string | trim) != ''
+        and (
+          bootstrap_tailscale_status.rc != 0
+          or (bootstrap_tailscale_status_json.BackendState | default('')) in ['NeedsLogin', 'NoState']
+          or (((bootstrap_tailscale_status_json.Self | default({})).ID | default('') | string | trim) == '')
+        )
+      }}
+
 - name: Join tailnet when auth key is configured
   ansible.builtin.shell: |
     set -euo pipefail
@@ -73,5 +91,4 @@
     executable: /bin/bash
   no_log: true
   when:
-    - (bootstrap_tailscale_auth_key | string | trim) != ""
-    - bootstrap_tailscale_status.rc != 0
+    - bootstrap_tailscale_needs_join | bool
