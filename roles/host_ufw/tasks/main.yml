@@ -1,0 +1,179 @@
+---
+- name: Validate host_ufw defaults
+  ansible.builtin.assert:
+    that:
+      - host_ufw.logging in ['off', 'low', 'medium', 'high', 'full']
+      - host_ufw.default_incoming_policy in ['allow', 'deny', 'reject']
+      - host_ufw.default_outgoing_policy in ['allow', 'deny', 'reject']
+      - (host_ufw.managed_state_dir | string | trim) != ''
+      - (host_ufw.managed_state_file | string | trim) != ''
+    fail_msg: "host_ufw requires valid logging, policy, and managed state settings."
+  when: host_ufw.enabled | bool
+
+- name: Initialize effective host_ufw rules
+  ansible.builtin.set_fact:
+    host_ufw_effective_rules: []
+  when: host_ufw.enabled | bool
+
+- name: Normalize baseline TCP rules
+  ansible.builtin.set_fact:
+    host_ufw_effective_rules: "{{ host_ufw_effective_rules + [host_ufw_rule] }}"
+  loop: "{{ host_ufw.baseline_tcp_public | default([]) }}"
+  loop_control:
+    label: "tcp/{{ item }}"
+  vars:
+    host_ufw_rule:
+      name: "baseline-tcp-{{ item }}"
+      rule: allow
+      direction: in
+      port: "{{ item | int }}"
+      proto: tcp
+      from: any
+      comment: "crownops host_ufw baseline tcp {{ item }}"
+  when: host_ufw.enabled | bool
+
+- name: Normalize baseline UDP rules
+  ansible.builtin.set_fact:
+    host_ufw_effective_rules: "{{ host_ufw_effective_rules + [host_ufw_rule] }}"
+  loop: "{{ host_ufw.baseline_udp_public | default([]) }}"
+  loop_control:
+    label: "udp/{{ item }}"
+  vars:
+    host_ufw_rule:
+      name: "baseline-udp-{{ item }}"
+      rule: allow
+      direction: in
+      port: "{{ item | int }}"
+      proto: udp
+      from: any
+      comment: "crownops host_ufw baseline udp {{ item }}"
+  when: host_ufw.enabled | bool
+
+- name: Normalize explicit host_ufw requests
+  ansible.builtin.set_fact:
+    host_ufw_effective_rules: "{{ host_ufw_effective_rules + [host_ufw_rule] }}"
+  loop: "{{ host_ufw.requests | default([]) }}"
+  loop_control:
+    label: "{{ item.name | default('unnamed-rule') }}"
+  vars:
+    host_ufw_rule:
+      name: "{{ item.name | default('') | string }}"
+      rule: "{{ item.rule | default('allow') | string }}"
+      direction: "{{ item.direction | default('in') | string }}"
+      port: "{{ item.port | int }}"
+      proto: "{{ item.proto | default('tcp') | string }}"
+      from: "{{ item.from | default('any') | string }}"
+      comment: "{{ item.comment | default('crownops host_ufw ' ~ (item.name | default('managed-rule'))) | string }}"
+  when: item.enabled | default(true) | bool
+
+- name: Validate effective host_ufw rules
+  ansible.builtin.assert:
+    that:
+      - (item.name | length) > 0
+      - item.name is match('^[a-z0-9][a-z0-9_-]*$')
+      - item.rule == 'allow'
+      - item.direction == 'in'
+      - item.proto in ['tcp', 'udp']
+      - item.port > 0
+      - item.port < 65536
+      - (item.from | length) > 0
+    fail_msg: "Invalid host_ufw rule '{{ item.name | default('unnamed') }}'."
+  loop: "{{ host_ufw_effective_rules }}"
+  loop_control:
+    label: "{{ item.name }}"
+  when: host_ufw.enabled | bool
+
+- name: Assert host_ufw rule names are unique
+  ansible.builtin.assert:
+    that:
+      - (host_ufw_effective_rules | map(attribute='name') | list | unique | length) == (host_ufw_effective_rules | length)
+    fail_msg: "host_ufw rule names must be unique."
+  when: host_ufw.enabled | bool
+
+- name: Ensure host_ufw managed state directory exists
+  ansible.builtin.file:
+    path: "{{ host_ufw.managed_state_dir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: '0750'
+  when: host_ufw.enabled | bool
+
+- name: Check existing host_ufw managed state file
+  ansible.builtin.stat:
+    path: "{{ host_ufw.managed_state_file }}"
+  register: host_ufw_state_stat
+  when: host_ufw.enabled | bool
+
+- name: Read existing host_ufw managed state file
+  ansible.builtin.slurp:
+    path: "{{ host_ufw.managed_state_file }}"
+  register: host_ufw_state_raw
+  when:
+    - host_ufw.enabled | bool
+    - host_ufw_state_stat.stat.exists
+
+- name: Parse previous host_ufw managed rules
+  ansible.builtin.set_fact:
+    host_ufw_previous_rules: "{{ (host_ufw_state_raw.content | b64decode | from_json).rules | default([]) }}"
+  when:
+    - host_ufw.enabled | bool
+    - host_ufw_state_stat.stat.exists
+
+- name: Configure UFW logging
+  community.general.ufw:
+    logging: "{{ host_ufw.logging }}"
+  when: host_ufw.enabled | bool
+
+- name: Configure UFW default policies
+  community.general.ufw:
+    direction: "{{ item.direction }}"
+    policy: "{{ item.policy }}"
+  loop:
+    - { direction: incoming, policy: "{{ host_ufw.default_incoming_policy }}" }
+    - { direction: outgoing, policy: "{{ host_ufw.default_outgoing_policy }}" }
+  when: host_ufw.enabled | bool
+
+- name: Remove stale managed UFW rules
+  community.general.ufw:
+    delete: true
+    rule: "{{ item.rule }}"
+    direction: "{{ item.direction }}"
+    port: "{{ item.port }}"
+    proto: "{{ item.proto }}"
+    from_ip: "{{ item.from }}"
+    comment: "{{ item.comment }}"
+  loop: "{{ host_ufw_previous_rules | difference(host_ufw_effective_rules) }}"
+  loop_control:
+    label: "{{ item.name }}"
+  when: host_ufw.enabled | bool
+
+- name: Apply desired managed UFW rules
+  community.general.ufw:
+    rule: "{{ item.rule }}"
+    direction: "{{ item.direction }}"
+    port: "{{ item.port }}"
+    proto: "{{ item.proto }}"
+    from_ip: "{{ item.from }}"
+    comment: "{{ item.comment }}"
+  loop: "{{ host_ufw_effective_rules }}"
+  loop_control:
+    label: "{{ item.name }}"
+  when: host_ufw.enabled | bool
+
+- name: Enable UFW
+  community.general.ufw:
+    state: enabled
+  when: host_ufw.enabled | bool
+
+- name: Persist managed host_ufw state
+  ansible.builtin.copy:
+    dest: "{{ host_ufw.managed_state_file }}"
+    owner: root
+    group: root
+    mode: '0600'
+    content: |
+      {
+        "rules": {{ host_ufw_effective_rules | to_nice_json }}
+      }
+  when: host_ufw.enabled | bool

@@ -1,0 +1,14 @@
+---
+host_ufw:
+  enabled: true
+  logging: low
+  default_incoming_policy: deny
+  default_outgoing_policy: allow
+  managed_state_dir: /etc/crownops
+  managed_state_file: /etc/crownops/host-ufw-rules.json
+  baseline_tcp_public: []
+  baseline_udp_public: []
+  requests: []
+
+host_ufw_effective_rules: []
+host_ufw_previous_rules: []

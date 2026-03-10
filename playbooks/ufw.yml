@@ -1,0 +1,7 @@
+---
+- name: Reconcile steady-state host UFW policy
+  hosts: base_hosts
+  become: true
+  gather_facts: false
+  roles:
+    - role: host_ufw
